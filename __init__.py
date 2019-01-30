@@ -1,10 +1,5 @@
-from . import api,exceptions
+from . import api,exceptions,Hikari,Fracture
 import logging
+import collections
 #import systemd
 
-class Hikari(api.Arcaea):
-    def __init__(self):
-        pass
-    def __preCheck(self):
-        pass
-    
