@@ -1,8 +1,8 @@
 import requests,requests_oauthlib
-import asyncio,sys,os,json,time,traceback
+import asyncio,sys,os,json,time,traceback,logging
 from pprint import pprint
 from base64 import b64encode,b64decode
-import exceptions
+from . import exceptions
 arcauth = "https://arcapi.lowiro.com/4/auth/login"
 arcapi = {
     'base': 'https://arcapi.lowiro.com/4/',
@@ -19,7 +19,7 @@ arcapi = {
 FakeHeader = {
     'AppVersion': '', #从Config中读取
     'User-Agent': 'Arc-mobile/{} CFNetwork/{} Darwin/{}'
-}
+}# DeviceID只有GetAuth方法用得到, 故不在这里
 
 aggreateCode = {
     # Deprecated
@@ -34,8 +34,9 @@ aggreateCode = {
     重写代码+方法
 """
 class Arcaea(object):
-    def debug(self):
-        return [self.__cred,self.__pswd,self.__auth]
+    def debug(self,vari):
+        assert type(vari) is str
+        eval("print("+vari+")")
     def __init__(self,path='config.json',precheck = True,byweb = False,**kwargs):
         # Initialize via File
         if precheck: 
@@ -46,20 +47,20 @@ class Arcaea(object):
         self.__pswd = self._prop.get('adminPswd')
         self.__auth = self._prop.get('adminAuth')
         # headers初始化
-        if byweb: FakeHeader['User-Agent'] = 'web'
+        self._FakeHeader = FakeHeader
+        if byweb: self._FakeHeader['User-Agent'] = 'web'
         else: 
-            FakeHeader['User-Agent'] = FakeHeader['User-Agent'].format(
+            self._FakeHeader['User-Agent'] = self._FakeHeader['User-Agent'].format(
             self._prop['arcVer']['Arc-mobile'],
             self._prop['arcVer']['CFNetwork'],
             self._prop['arcVer']['Darwin'])
-            FakeHeader['AppVer'] = self._prop.get("AppVer")
+            self._FakeHeader['AppVersion'] = self._prop.get("AppVer")
         if self.__auth == None:
             if self.__cred is None or self.__pswd is None:
                 raise exceptions.badAuthException("Invalid Login Infomation")
             self.__auth = self.getAuth(self.__cred,self.__pswd)
             self._prop['adminAuth'] = self.__auth
             self.__setProp()
-               
         #pprint(self.Datafetch())
     def __getProp(self,path):
         """
@@ -81,7 +82,7 @@ class Arcaea(object):
         """
         import uuid
         toencode = cred+":"+pswd
-        if FakeHeader['AppVersion'] == 'web': deviceid = 'web'
+        if self._FakeHeader['AppVersion'] == 'web': deviceid = 'web'
         else: 
             if self._prop.get('uuid') != None: 
                 deviceid = self._prop.get('uuid')
@@ -93,7 +94,7 @@ class Arcaea(object):
               'Authorization': 'Basic ' + b64encode(
                   toencode.encode('ascii')).decode(),
               'DeviceId': deviceid,
-              'AppVersion': FakeHeader['AppVer']}
+              'AppVersion': self._FakeHeader['AppVer']}
         po = requests.post(arcauth,headers=headers)
         try:
             po.raise_for_status()
@@ -104,7 +105,8 @@ class Arcaea(object):
         else: raise exceptions.invalidCredException()
         
     def getMe(self):
-        """获取个人信息，若无异常返回一个dict对象"""
+        """
+        获取该用户(admin)信息，若无异常返回一个dict对象"""
         headers = self.getHeader({'Authorization':'Bearer '+self.__auth})
         url = arcapi['aggreate'].format(self.generateAggregate(arcapi['me']))
         req = requests.get(url,headers = headers)
@@ -112,23 +114,21 @@ class Arcaea(object):
         return req.json()['value']
 
     def addFriend(self,friend_code):
+        """用公开的Friend_id添加好友"""
         assert type(friend_code) is str
         url = arcapi['base']+arcapi['addFriend']
         headers = self.getHeader({'Authorization':'Bearer '+self.__auth})
         postForm = {"friend_code":friend_code}
         req = requests.post(url,headers=headers,params=postForm)
-        try:
+        if req.json()['success'] == False: raise requests.exceptions.HTTPError(req.text)
+        else: 
             req.raise_for_status()
-        except Exception as e:
-            print(req.text)
-            raise e
-        if req.json()['success'] == False: return req.json()
-        else: return req.json()['value']['friends']
+            return req.json()['value']['friends']
         
     def delFriend(self,friend_id):
         assert type(friend_id) is str
         url = arcapi['base']+arcapi['delFriend']
-        headers = (FakeHeader.copy()).update({'Authorization':'Bearer '+self.__auth})
+        headers = (self._FakeHeader.copy()).update({'Authorization':'Bearer '+self.__auth})
         postForm = {"friend_id":friend_id}
         req = requests.post(url,headers = headers,data=postForm)
         req.raise_for_status()
@@ -149,7 +149,7 @@ class Arcaea(object):
     def getHeader(self,headers):
         """获取HTTP头"""
         assert type(headers) is dict
-        return (FakeHeader.copy()).update(headers)
+        return (self._FakeHeader.copy()).update(headers)
     
     @classmethod
     def generateAggregate(cls,*args, **kwargs):
