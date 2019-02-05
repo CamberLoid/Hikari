@@ -106,7 +106,7 @@ class Arcaea(object):
     def getMe(self):
         """获取个人信息，若无异常返回一个dict对象"""
         headers = self.getHeader({'Authorization':'Bearer '+self.__auth})
-        url = arcapi['aggreate'].format(self.generateAggregate(arcapi['me']))
+        url = arcapi['base'] + arcapi['aggreate'].format(self.generateAggregate(arcapi['me']))
         req = requests.get(url,headers = headers)
         req.raise_for_status()
         return req.json()['value']
@@ -161,5 +161,5 @@ class Arcaea(object):
         for i in query:
             aggregate.append({'endpoint':i,'id':s})
             s+=1
-        return aggregate
+        return str(aggregate)
     
