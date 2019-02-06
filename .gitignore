@@ -108,3 +108,5 @@ venv.bak/
 LethExample.json
 .gitignore
 proxychains.conf
+.vscode/settings.json
+config.json

@@ -12,9 +12,9 @@ arcapi = {
     'aggreate': 'compose/aggregate?calls={}',
     'addFriend': 'friend/me/add', #friend_code, 9 digits, public_accessible
     'delFriend': 'friend/me/delete', #friend_ID , about 6 digit, public_inaccessible
-    'getSongRankGlobal': 'score/song?song_id={}&difficulty={}&start=0&limit=10',
-    'getSongRankMe': 'score/song/me?song_id={}&difficulty={}&start=4&limit=8',#response may be an empty list
-    'getSongRankFriend': 'score/song/friend?song_id={}&difficulty={}&start=0&limit=12'
+    'getSongRank': 'score/song?song_id={}&difficulty={}&start=0&limit=10', # 全球rank获取
+    'getSongRankme': 'score/song/me?song_id={}&difficulty={}&start=4&limit=8', # 
+    'getSongRankfriend': 'score/song/friend?song_id={}&difficulty={}&start=0&limit=12' # 获取好友Rank
 }
 
 FakeHeader = {
@@ -22,17 +22,10 @@ FakeHeader = {
     'User-Agent': 'Arc-mobile/{} CFNetwork/{} Darwin/{}'
 }
 
-aggreateCode = {
-    # Deprecated
-    # me: [{ "endpoint": "user/me", "id": 0 }]
-    # 靠生成, 不硬写进去了
-}
-
-
 """
     Cambot.modules.Hikari
-    Version: Arcapiv2.beta0x01 + Hikari + Fracture(OnDevelop)
-    重写代码+方法
+    Version: Arcapiv2.beta0x02 + Hikari(WIP) + Fracture(WIP)
+    好友功能 + 打歌信息
 """
 class Arcaea(object):
     def debug(self):
@@ -117,7 +110,7 @@ class Arcaea(object):
         return req.json()['value'][0]['value']
 
     def addFriend(self,friend_code):
-        assert type(friend_code) is str
+        """使用公开的Friend Code(9位)增加好友"""
         friend_code = int(friend_code)
         url = arcapi['base']+arcapi['addFriend']
         headers = self.getHeader({'Authorization':'Bearer '+self.__auth})
@@ -134,23 +127,40 @@ class Arcaea(object):
         else: return req.json()['value']['friends']
         
     def delFriend(self,friend_id):
+        """使用非公开的Friend ID删除好友"""
         friend_id = int(friend_id)
         url = arcapi['base']+arcapi['delFriend']
         headers = self.getHeader({'Authorization':'Bearer '+self.__auth})
         postForm = {"friend_id":friend_id}
-        req = requests.post(url,headers = headers,data=postForm)
-        req.raise_for_status()
+        req = requests.post(url,headers=headers,data=postForm)
+        try:req.raise_for_status()
+        except requests.exceptions.HTTPError as err:
+            if err.response.status_code == 403 or err.response.status_code == 404:
+                raise exceptions.FriendError(
+                    err,"Friend Error Occured: "
+                    +exceptions.friendErrMsg.get(err.response.json()['error_code'],'Unknown Error'))
+            else: raise err
         if req.json()['success'] == True: return True
         else: return False
-
+    
     async def reAuth(self):
         self._auth = await self.getAuth(self.__cred,self.__pswd)
 
-    def getSongRank(self,song_id,method = ''):
-        
-        pass
+    def getSongRank(self,song_id,difficulty=2,method = ''):
+        """获取特定曲目的信息
+        song_id为必填, 将通过查询json文件获取
+        难度默认为FTR(2), 其他有PST(0), PRS(1)"""
+        assert type (song_id) is str
+        assert method in ['', 'me', 'friend']
+        url = arcapi['getSongRank{}'.format(method)].format(song_id,difficulty)
+        url = arcapi['base']+url
+        headers = self.getHeader({'Authorization':'Bearer '+self.__auth})
+        req = requests.get(url,headers= headers)
+        req.raise_for_status()
+        return req.json()['value']
+
     def __precheck(self,path):
-        "" "前置检查"""
+        """前置检查"""
         if not os.path.exists(path): raise OSError("不存在指定配置文件")
         return True
 
@@ -174,5 +184,6 @@ class Arcaea(object):
             s+=1
         aggregate = aggregate[:-2]
         aggregate += ']'
-        return aggregate    
-        # return urllib.parse.quote(aggregate, safe='')
+        return aggregate
+
+    

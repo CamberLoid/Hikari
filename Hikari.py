@@ -1,6 +1,5 @@
-from . import *
-import logging,asyncio,
-
+from . import api
+import logging,asyncio
 
 class Hikari(api.Arcaea):
     def __init__(self):
@@ -12,7 +11,7 @@ class Hikari(api.Arcaea):
         pass
     def queryFriendRecent(self):
         pass
-    def queryFriendAny(self):
-        #具体实现是看songstats/me/friend
+    def queryFriendSongStat(self,songid,difficulty=2):
+        """通过 score/song/friend 查询任何人最好成绩"""
         pass
     
