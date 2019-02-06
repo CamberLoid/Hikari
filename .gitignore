@@ -107,3 +107,4 @@ venv.bak/
 .mypy_cache/
 LethExample.json
 .gitignore
+proxychains.conf
