@@ -1,5 +1,6 @@
 import requests,requests_oauthlib
 import asyncio,sys,os,json,time,traceback
+import urllib.parse
 from pprint import pprint
 from base64 import b64encode,b64decode
 import exceptions
@@ -36,7 +37,7 @@ aggreateCode = {
 class Arcaea(object):
     def debug(self):
         return [self.__cred,self.__pswd,self.__auth]
-    def __init__(self,path='config.json',precheck = True,byweb = False,**kwargs):
+    def __init__(self,path='config.json',precheck = False,byweb = False,**kwargs):
         # Initialize via File
         if precheck: 
             self.__precheck(path)
@@ -53,13 +54,17 @@ class Arcaea(object):
             self._prop['arcVer']['CFNetwork'],
             self._prop['arcVer']['Darwin'])
             FakeHeader['AppVer'] = self._prop.get("AppVer")
-        if self.__auth == None:
+        if self.__auth == None or self.__auth == '':
             if self.__cred is None or self.__pswd is None:
                 raise exceptions.badAuthException("Invalid Login Infomation")
             self.__auth = self.getAuth(self.__cred,self.__pswd)
             self._prop['adminAuth'] = self.__auth
             self.__setProp()
-               
+        if precheck:
+            data = self.getMe()
+            self.user_code = data['user_code']
+            self.name = data['user_name']
+            
         #pprint(self.Datafetch())
     def __getProp(self,path):
         """
@@ -109,24 +114,25 @@ class Arcaea(object):
         url = arcapi['base'] + arcapi['aggreate'].format(self.generateAggregate(arcapi['me']))
         req = requests.get(url,headers = headers)
         req.raise_for_status()
-        return req.json()['value']
+        return req.json()['value'][0]['value']
 
     def addFriend(self,friend_code):
         assert type(friend_code) is str
+        friend_code = int(friend_code)
         url = arcapi['base']+arcapi['addFriend']
         headers = self.getHeader({'Authorization':'Bearer '+self.__auth})
         postForm = {"friend_code":friend_code}
-        req = requests.post(url,headers=headers,params=postForm)
-        try:
-            req.raise_for_status()
-        except Exception as e:
-            print(req.text)
-            raise e
+        req = requests.post(url,headers=headers,data=postForm)
+        try:req.raise_for_status()
+        except requests.exceptions.HTTPError() as err:
+            if err.response.status_code == 403 or err.response.status_code == 404:
+                raise exceptions.FriendError(err)
+            else: raise err
         if req.json()['success'] == False: return req.json()
         else: return req.json()['value']['friends']
         
     def delFriend(self,friend_id):
-        assert type(friend_id) is str
+        friend_id = int(friend_id)
         url = arcapi['base']+arcapi['delFriend']
         headers = (FakeHeader.copy()).update({'Authorization':'Bearer '+self.__auth})
         postForm = {"friend_id":friend_id}
@@ -142,24 +148,29 @@ class Arcaea(object):
         
         pass
     def __precheck(self,path):
-        """前置检查"""
+        "" "前置检查"""
         if not os.path.exists(path): raise OSError("不存在指定配置文件")
         return True
 
     def getHeader(self,headers):
         """获取HTTP头"""
         assert type(headers) is dict
-        return (FakeHeader.copy()).update(headers)
-    
+        ret = (FakeHeader.copy())
+        ret.update(headers)
+        return ret
+
     @classmethod
     def generateAggregate(cls,*args, **kwargs):
         """生成endpoint"""
-        query = args
-        if query == None: query = ['user/me']
-        aggregate = []
+        if len(args) == 0 or args == None: query = ['user/me']
+        elif type(args[0]) == str: query = [args[0]]
+        else: query = args[0]
+        aggregate = '['
         s = 0
         for i in query:
-            aggregate.append({'endpoint':i,'id':s})
+            aggregate = aggregate + '{ "endpoint": "'+i+'", "id": '+str(s)+' }, '
             s+=1
-        return str(aggregate)
-    
+        aggregate = aggregate[:-2]
+        aggregate += ']'
+        return aggregate    
+        # return urllib.parse.quote(aggregate, safe='')
