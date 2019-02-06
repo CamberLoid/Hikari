@@ -53,7 +53,7 @@ class Arcaea(object):
             self._prop['arcVer']['Arc-mobile'],
             self._prop['arcVer']['CFNetwork'],
             self._prop['arcVer']['Darwin'])
-            FakeHeader['AppVer'] = self._prop.get("AppVer")
+            FakeHeader['AppVersion'] = self._prop.get("AppVer")
         if self.__auth == None or self.__auth == '':
             if self.__cred is None or self.__pswd is None:
                 raise exceptions.badAuthException("Invalid Login Infomation")
@@ -124,9 +124,11 @@ class Arcaea(object):
         postForm = {"friend_code":friend_code}
         req = requests.post(url,headers=headers,data=postForm)
         try:req.raise_for_status()
-        except requests.exceptions.HTTPError() as err:
+        except requests.exceptions.HTTPError as err:
             if err.response.status_code == 403 or err.response.status_code == 404:
-                raise exceptions.FriendError(err)
+                raise exceptions.FriendError(
+                    err,"Friend Error Occured: "
+                    +exceptions.friendErrMsg.get(err.response.json()['error_code'],'Unknown Error'))
             else: raise err
         if req.json()['success'] == False: return req.json()
         else: return req.json()['value']['friends']
@@ -134,7 +136,7 @@ class Arcaea(object):
     def delFriend(self,friend_id):
         friend_id = int(friend_id)
         url = arcapi['base']+arcapi['delFriend']
-        headers = (FakeHeader.copy()).update({'Authorization':'Bearer '+self.__auth})
+        headers = self.getHeader({'Authorization':'Bearer '+self.__auth})
         postForm = {"friend_id":friend_id}
         req = requests.post(url,headers = headers,data=postForm)
         req.raise_for_status()
