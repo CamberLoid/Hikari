@@ -1,4 +1,4 @@
-# Arcaea API 自造轮子
+# Arcaea API 自造轮子 / OnDeveloping
 **Get yourself lost in the memories in a more *hardcore* way.**
 
 An Unofficial Wrapper for Arcaea/arcapi, named Hikari(Main Branch/High Level API)

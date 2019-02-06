@@ -1,6 +1,5 @@
-from . import *
+from . import api
 import logging,asyncio
-
 
 class Hikari(api.Arcaea):
     def __init__(self):
