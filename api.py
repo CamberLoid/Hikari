@@ -1,9 +1,9 @@
 import requests,requests_oauthlib
-import asyncio,sys,os,json,time,traceback
+import asyncio,sys,os,json,time,traceback,logging
 import urllib.parse
 from pprint import pprint
 from base64 import b64encode,b64decode
-import exceptions
+from . import exceptions
 arcauth = "https://arcapi.lowiro.com/4/auth/login"
 arcapi = {
     'base': 'https://arcapi.lowiro.com/4/',
@@ -24,16 +24,18 @@ FakeHeader = {
 
 """
     Cambot.modules.Hikari
-    Version: Arcapiv2.beta0x02 + Hikari(WIP) + Fracture(WIP)
-    好友功能 + 打歌信息
+    Version: Arcapiv2(0x03)(Ready) + Hikari(WIP) + Fracture(WIP)
+    需要一个config.json作为配置文件
+
+    Update Notes:
+    0x03: 好友功能 + 打歌信息
 """
 class Arcaea(object):
     def debug(self):
         return [self.__cred,self.__pswd,self.__auth]
     def __init__(self,path='config.json',precheck = False,byweb = False,**kwargs):
-        # Initialize via File
-        if precheck: 
-            self.__precheck(path)
+        """<TODO> 把文件读取重写，改为由字典初始化  
+        先保留文件读入"""
         self.__getProp(path)
         self.__path = path
         self.__cred = self._prop.get('adminCred')
@@ -47,12 +49,29 @@ class Arcaea(object):
             self._prop['arcVer']['CFNetwork'],
             self._prop['arcVer']['Darwin'])
             FakeHeader['AppVersion'] = self._prop.get("AppVer")
+        if (self.__auth != None or self.__auth != '') and precheck:
+            #WIP
+            try: ex = self.getMe()
+            except: self.__auth = None
         if self.__auth == None or self.__auth == '':
             if self.__cred is None or self.__pswd is None:
                 raise exceptions.badAuthException("Invalid Login Infomation")
             self.__auth = self.getAuth(self.__cred,self.__pswd)
             self._prop['adminAuth'] = self.__auth
-            self.__setProp()
+            self.__setProp(self.__path)
+        else:
+            try:
+                logging.info("Pre-Testing Auth")
+                self.getMe()
+            except requests.exceptions.HTTPError as err:
+                logging.warning("Auth was Outdated, Reauthing...")
+                try: 
+                    self.reAuth()
+                    self.getMe()
+                except:
+                    logging.fatal("Bad user cred and pswd, Please Re-check config.json(or your config file)")
+                    err.args = ["Bad user cred and pswd, Please Re-check config.json(or your config file)"]
+                    raise err
         if precheck:
             data = self.getMe()
             self.user_code = data['user_code']
@@ -65,11 +84,10 @@ class Arcaea(object):
         """
         with open(path,encoding='UTF-8') as f:
             self._prop = json.load(f)
-    def __setProp(self):
+    def __setProp(self,path):
         """
         写入config.json
         """ 
-        path = self.__path
         with open(path,mode = 'w',encoding='UTF-8') as f:
             json.dump(self._prop,f)
     
@@ -86,18 +104,18 @@ class Arcaea(object):
             else: 
                 deviceid = str(uuid.uuid4()).upper()
                 self._prop['uuid'] = deviceid
-                self.__setProp()
+                self.__setProp(self.__path)
         headers = {
               'Authorization': 'Basic ' + b64encode(
                   toencode.encode('ascii')).decode(),
               'DeviceId': deviceid,
-              'AppVersion': FakeHeader['AppVer']}
+              'AppVersion': FakeHeader['AppVersion']}
         po = requests.post(arcauth,headers=headers)
         try:
             po.raise_for_status()
-        except:
-            print(po.text)
-            print(po.json())
+        except requests.exceptions.HTTPError as err:
+            err.args = ["Bad user cred and pswd, Please Re-check config.json(or your config file)"]
+            raise err
         if po.json()['success']==True: return po.json()['access_token']
         else: raise exceptions.invalidCredException()
         
@@ -115,6 +133,7 @@ class Arcaea(object):
         url = arcapi['base']+arcapi['addFriend']
         headers = self.getHeader({'Authorization':'Bearer '+self.__auth})
         postForm = {"friend_code":friend_code}
+        
         req = requests.post(url,headers=headers,data=postForm)
         try:req.raise_for_status()
         except requests.exceptions.HTTPError as err:
@@ -124,7 +143,9 @@ class Arcaea(object):
                     +exceptions.friendErrMsg.get(err.response.json()['error_code'],'Unknown Error'))
             else: raise err
         if req.json()['success'] == False: return req.json()
-        else: return req.json()['value']['friends']
+        else: 
+            for i in req.json()['value']['friends']:
+                if i['user_code'] == str(friend_code): return i
         
     def delFriend(self,friend_id):
         """使用非公开的Friend ID删除好友"""
@@ -132,6 +153,7 @@ class Arcaea(object):
         url = arcapi['base']+arcapi['delFriend']
         headers = self.getHeader({'Authorization':'Bearer '+self.__auth})
         postForm = {"friend_id":friend_id}
+
         req = requests.post(url,headers=headers,data=postForm)
         try:req.raise_for_status()
         except requests.exceptions.HTTPError as err:
@@ -143,8 +165,8 @@ class Arcaea(object):
         if req.json()['success'] == True: return True
         else: return False
     
-    async def reAuth(self):
-        self._auth = await self.getAuth(self.__cred,self.__pswd)
+    def reAuth(self):
+        self._auth = self.getAuth(self.__cred,self.__pswd)
 
     def getSongRank(self,song_id,difficulty=2,method = ''):
         """获取特定曲目的信息
@@ -185,5 +207,7 @@ class Arcaea(object):
         aggregate = aggregate[:-2]
         aggregate += ']'
         return aggregate
-
     
+    @classmethod
+    def initFromFile(cls):
+        pass
