@@ -22,7 +22,7 @@ An Unofficial Wrapper for Arcaea/arcapi, named Hikari(Main Branch/High Level API
 ## TODOs
 正在造的:
 ``` 
-master/Hikari -> /me 正在维护的，用途是Telegram上的公用查询
+Cambot/Hikari -> /me 正在维护的，用途是Telegram上的公用查询
 ```
 之后会开的Branch:
 ```
