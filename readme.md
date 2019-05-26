@@ -1,42 +1,30 @@
-# Arcaea API 自造轮子 / OnDeveloping
-**Get yourself lost in the memories in a more *hardcore* way.**
+> > An intense to satisfaction in the world.  
+> > And composing to do something about it.
+> 
+> Ether Strike from Akira Complex
+> 
+# Hikari v3
+Hikari是一个(不完全的)Python模组  
+请求什么的主要来源于MitmProxy对自己某台iOS设备进行抓包得出  
+模组Wrap了Arcaea的RESTFulAPI 
 
-An Unofficial Wrapper for Arcaea/arcapi, named Hikari(Main Branch/High Level API)
+## Legacy Code
+本地太乱了 没办法 直接干掉重来了 ~~顺带拉高了一个版本号~~  
+Hikari v2的相关代码移动到了Legacy_Code的文件夹内 除了参考外基本没有用 会在完成后删除
 
-~~单独开了个repo放这个~~  
-~~本来想离线测试完上线的，结果ssd崩了，丢档，重造，贼不高兴~~  
-<TODO>  
-2.0.x版本更新了, arcapi的官方版本从4->5, ~~但是我把之前依赖这个写的Bot咕了~~  
-总之需要重写了, 顺便把本地啥的整理一下, 就先咕着了  
-**0x04 准备**
+# Hikari v3的食用说明
+虽然项目并非人类适用 (也就是Bot/其他程序适用)  
+*Hikari v3* 仍然基于人类可以安全享用 非转基因的Requests HTTP库 并计划添加异步(ASync)支持  
+相关联的 *HikariBot* 计划部署至Telegram, Discord and 腾讯QQ(如果有人会用CoolQ或者TX开了在自己的API) 上
 
+## Plans
+被我咕咕了好久的 Cambot/Hikari 名字就直接改为HikariBot了 ~~梗直如我~~  
+之后自学了CSS的话可能会写一些网页 图片啥的 也就是说现在还是纯文本实现  
+HikariBot可能会单独开个项目
 
-## DOCs
-`api.py`: ~~底层api, 从Arcaea抓包扒的/`class arcaea(object)`  ~~ 计划只会涉及网络IO, 本来是什么都丢在这里了, **计划整理**
+## Open Source
+Hikari是一个基于MIT协议的开源项目 
+尽管我每个月还是会给FSF 5USD的会费 但是我屑他们家具有传染性的GPL  
+基于MIT就说明了你可以随便用它 管他开源还是闭源  
 
-`Hikari.py`: 包含了一般人用的一些接口和特性什么的(+上一个版本的api)/`class Hikari(base):`  
-
-`Fracture.py`: ~~字面, 会导致Bot和你的账号骨折~~ 包含了一些Admin用高级API, 可能会违反ToS所以请不要滥用/`class Fracture(Hikari)`
-
-
-## TODOs
-正在造的:
-``` 
-Cambot/Hikari -> /me 正在维护的，用途是Telegram上的公用查询
-```
-之后会开的Branch:
-```
-Lethe -> /me 计划开发，更多的是个人用途(也就是之前的HikariV1)
-#可能理解错了Branch的用法，但是，管他呢
-```
----
-* 关于config.json  
-[ ]todo
-* 关于songData.json
-[ ]todo
-
----
-
-基于MIT协议, 作者不对使用产生的后果负责  
-Use at your own risk
-
+顺带一提 HikariBot(将来时)也一样使用MIT协议分发
